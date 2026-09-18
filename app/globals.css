@@ -2,25 +2,79 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #111827;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: #ffffff;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  margin: 0;
+  background: #ffffff;
+  color: #111827;
   font-family: Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Make common text elements stay dark on mobile */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: #111827;
+}
+
+p {
+  color: #374151;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+input::placeholder {
+  color: #4b5563;
+  opacity: 1;
+}
+
+/* Prevent phones from applying their own color adjustments */
+@media (prefers-color-scheme: dark) {
+  html,
+  body {
+    background: #ffffff;
+    color: #111827;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    color: #111827;
+  }
+
+  p {
+    color: #374151;
+  }
+
+  input {
+    color: #111827;
+    background: #f9fafb;
+  }
+
+  input::placeholder {
+    color: #4b5563;
+  }
 }
