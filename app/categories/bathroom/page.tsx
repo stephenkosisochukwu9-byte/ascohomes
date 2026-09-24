@@ -48,10 +48,11 @@ export default function BathroomPage() {
 
   const handleAddToCart = (product: Product) => {
     addToCart({
-      name: product.name,
-      price: Number(product.price),
-      image: product.image || undefined,
-    });
+  id: product.id,
+  name: product.name,
+  price: Number(product.price),
+  image: product.image || undefined,
+});
 
     setMessage(`${product.name} added to cart!`);
 
