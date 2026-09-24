@@ -1,8 +1,10 @@
 "use client";
 
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+
 
 type Order = {
   id: string;
@@ -14,6 +16,10 @@ type Order = {
   created_at: string;
 };
 
+
+const PAYMENT_STATUSES = ["pending", "confirmed"];
+
+
 const ORDER_STATUSES = [
   "pending",
   "processing",
@@ -22,20 +28,32 @@ const ORDER_STATUSES = [
   "cancelled",
 ];
 
+
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+
+
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(
+    null
+  );
+
+
+  const [updatingPaymentOrderId, setUpdatingPaymentOrderId] =
+    useState<string | null>(null);
+
 
   useEffect(() => {
     loadOrders();
   }, []);
 
+
   const loadOrders = async () => {
     try {
       setLoading(true);
       setError("");
+
 
       const { data, error } = await supabase
         .from("orders")
@@ -44,11 +62,13 @@ export default function AdminOrdersPage() {
         )
         .order("created_at", { ascending: false });
 
+
       if (error) {
         console.error("Could not load orders:", error);
         setError("Could not load orders.");
         return;
       }
+
 
       setOrders(data || []);
     } catch (err) {
@@ -59,6 +79,61 @@ export default function AdminOrdersPage() {
     }
   };
 
+
+  // ----------------------------------------
+  // UPDATE PAYMENT STATUS
+  // ----------------------------------------
+
+
+  const updatePaymentStatus = async (
+    orderId: string,
+    newPaymentStatus: string
+  ) => {
+    try {
+      setUpdatingPaymentOrderId(orderId);
+      setError("");
+
+
+      const { error } = await supabase
+        .from("orders")
+        .update({
+          payment_status: newPaymentStatus,
+        })
+        .eq("id", orderId);
+
+
+      if (error) {
+        console.error("Could not update payment status:", error);
+        setError("Could not update the payment status.");
+        return;
+      }
+
+
+      // Update the order immediately on the page
+      setOrders((currentOrders) =>
+        currentOrders.map((order) =>
+          order.id === orderId
+            ? {
+                ...order,
+                payment_status: newPaymentStatus,
+              }
+            : order
+        )
+      );
+    } catch (err) {
+      console.error("Payment status update error:", err);
+      setError("Something went wrong while updating payment status.");
+    } finally {
+      setUpdatingPaymentOrderId(null);
+    }
+  };
+
+
+  // ----------------------------------------
+  // UPDATE ORDER STATUS
+  // ----------------------------------------
+
+
   const updateOrderStatus = async (
     orderId: string,
     newStatus: string
@@ -67,6 +142,7 @@ export default function AdminOrdersPage() {
       setUpdatingOrderId(orderId);
       setError("");
 
+
       const { error } = await supabase
         .from("orders")
         .update({
@@ -74,13 +150,14 @@ export default function AdminOrdersPage() {
         })
         .eq("id", orderId);
 
+
       if (error) {
         console.error("Could not update order status:", error);
         setError("Could not update the order status.");
         return;
       }
 
-      // Update the order on the page immediately
+
       setOrders((currentOrders) =>
         currentOrders.map((order) =>
           order.id === orderId
@@ -99,9 +176,21 @@ export default function AdminOrdersPage() {
     }
   };
 
+
+  // ----------------------------------------
+  // FORMAT CURRENCY
+  // ----------------------------------------
+
+
   const formatCurrency = (amount: number | null) => {
     return `₦${Number(amount || 0).toLocaleString("en-NG")}`;
   };
+
+
+  // ----------------------------------------
+  // FORMAT DATE
+  // ----------------------------------------
+
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleString("en-NG", {
@@ -110,49 +199,84 @@ export default function AdminOrdersPage() {
     });
   };
 
+
+  // ----------------------------------------
+  // PAYMENT STATUS STYLE
+  // ----------------------------------------
+
+
   const getPaymentStatusClass = (status: string | null) => {
     switch (status) {
-      case "paid":
+      case "confirmed":
         return "bg-green-100 text-green-700";
+
 
       case "pending":
         return "bg-yellow-100 text-yellow-700";
 
-      case "failed":
-        return "bg-red-100 text-red-700";
 
       default:
         return "bg-gray-100 text-gray-700";
     }
   };
+
+
+  // ----------------------------------------
+  // ORDER STATUS STYLE
+  // ----------------------------------------
+
 
   const getOrderStatusClass = (status: string | null) => {
     switch (status) {
       case "processing":
         return "bg-blue-100 text-blue-700";
 
+
       case "shipped":
         return "bg-purple-100 text-purple-700";
+
 
       case "completed":
         return "bg-green-100 text-green-700";
 
+
       case "cancelled":
         return "bg-red-100 text-red-700";
 
+
       case "pending":
         return "bg-yellow-100 text-yellow-700";
+
 
       default:
         return "bg-gray-100 text-gray-700";
     }
   };
 
+
+  // ----------------------------------------
+  // SUMMARY
+  // ----------------------------------------
+
+
+  const confirmedOrders = orders.filter(
+    (order) => order.payment_status === "confirmed"
+  );
+
+
+  const totalRevenue = confirmedOrders.reduce(
+    (total, order) => total + Number(order.total_amount || 0),
+    0
+  );
+
+
   return (
     <main className="min-h-screen bg-gray-50 px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
 
+
         {/* HEADER */}
+
 
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -160,10 +284,13 @@ export default function AdminOrdersPage() {
               Orders
             </h1>
 
+
             <p className="mt-2 text-gray-600">
-              View and manage customer orders, payments and delivery information.
+              View and manage customer orders, payments and delivery
+              information.
             </p>
           </div>
+
 
           <div className="flex gap-3">
             <Link
@@ -172,6 +299,7 @@ export default function AdminOrdersPage() {
             >
               ← Dashboard
             </Link>
+
 
             <button
               onClick={loadOrders}
@@ -183,62 +311,61 @@ export default function AdminOrdersPage() {
           </div>
         </div>
 
+
         {/* SUMMARY */}
+
 
         <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-3">
 
+
           {/* TOTAL ORDERS */}
+
 
           <div className="rounded-2xl bg-white p-5 shadow-sm">
             <p className="text-sm font-medium text-gray-500">
               Total Orders
             </p>
 
+
             <p className="mt-2 text-2xl font-bold text-gray-900">
               {orders.length}
             </p>
           </div>
 
-          {/* PAID ORDERS */}
+
+          {/* CONFIRMED PAYMENTS */}
+
 
           <div className="rounded-2xl bg-white p-5 shadow-sm">
             <p className="text-sm font-medium text-gray-500">
-              Paid Orders
+              Confirmed Payments
             </p>
 
+
             <p className="mt-2 text-2xl font-bold text-green-600">
-              {
-                orders.filter(
-                  (order) => order.payment_status === "paid"
-                ).length
-              }
+              {confirmedOrders.length}
             </p>
           </div>
 
+
           {/* TOTAL REVENUE */}
+
 
           <div className="col-span-2 rounded-2xl bg-white p-5 shadow-sm md:col-span-1">
             <p className="text-sm font-medium text-gray-500">
               Total Revenue
             </p>
 
+
             <p className="mt-2 text-2xl font-bold text-blue-600">
-              {formatCurrency(
-                orders
-                  .filter(
-                    (order) => order.payment_status === "paid"
-                  )
-                  .reduce(
-                    (total, order) =>
-                      total + Number(order.total_amount || 0),
-                    0
-                  )
-              )}
+              {formatCurrency(totalRevenue)}
             </p>
           </div>
         </div>
 
+
         {/* ERROR */}
+
 
         {error && (
           <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4">
@@ -248,15 +375,20 @@ export default function AdminOrdersPage() {
           </div>
         )}
 
+
         {/* ORDERS */}
+
 
         <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
 
+
           {/* LOADING */}
+
 
           {loading && (
             <div className="p-10 text-center">
               <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
+
 
               <p className="mt-4 text-gray-600">
                 Loading orders...
@@ -264,7 +396,9 @@ export default function AdminOrdersPage() {
             </div>
           )}
 
+
           {/* EMPTY */}
+
 
           {!loading && orders.length === 0 && !error && (
             <div className="p-12 text-center">
@@ -272,9 +406,11 @@ export default function AdminOrdersPage() {
                 🛍️
               </div>
 
+
               <h2 className="mt-4 text-xl font-bold text-gray-900">
                 No orders yet
               </h2>
+
 
               <p className="mt-2 text-gray-500">
                 Customer orders will appear here after they place an order.
@@ -282,52 +418,69 @@ export default function AdminOrdersPage() {
             </div>
           )}
 
+
           {/* ORDERS LIST */}
+
 
           {!loading && orders.length > 0 && (
             <>
               {/* DESKTOP TABLE */}
 
+
               <div className="hidden overflow-x-auto md:block">
                 <table className="w-full">
+
+
                   <thead>
                     <tr className="border-b border-gray-200 bg-gray-50 text-left">
+
 
                       <th className="px-6 py-4 text-sm font-semibold text-gray-700">
                         Order
                       </th>
 
+
                       <th className="px-6 py-4 text-sm font-semibold text-gray-700">
                         Customer
                       </th>
+
 
                       <th className="px-6 py-4 text-sm font-semibold text-gray-700">
                         Amount
                       </th>
 
+
                       <th className="px-6 py-4 text-sm font-semibold text-gray-700">
                         Payment
                       </th>
+
 
                       <th className="px-6 py-4 text-sm font-semibold text-gray-700">
                         Status
                       </th>
 
+
                       <th className="px-6 py-4 text-sm font-semibold text-gray-700">
                         Date
                       </th>
 
+
                     </tr>
                   </thead>
 
+
                   <tbody>
+
+
                     {orders.map((order) => (
                       <tr
                         key={order.id}
                         className="border-b border-gray-100 last:border-0 hover:bg-gray-50"
                       >
 
+
                         {/* ORDER ID */}
+
 
                         <td className="px-6 py-5">
                           <p className="max-w-[180px] break-all text-sm font-semibold text-gray-900">
@@ -335,7 +488,9 @@ export default function AdminOrdersPage() {
                           </p>
                         </td>
 
+
                         {/* CUSTOMER */}
+
 
                         <td className="px-6 py-5">
                           <p className="max-w-[150px] break-all text-sm text-gray-700">
@@ -343,7 +498,9 @@ export default function AdminOrdersPage() {
                           </p>
                         </td>
 
+
                         {/* AMOUNT */}
+
 
                         <td className="px-6 py-5">
                           <p className="text-sm font-bold text-gray-900">
@@ -351,22 +508,57 @@ export default function AdminOrdersPage() {
                           </p>
                         </td>
 
-                        {/* PAYMENT */}
 
-                        <td className="px-6 py-5">
-                          <span
-                            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold capitalize ${getPaymentStatusClass(
-                              order.payment_status
-                            )}`}
-                          >
-                            {order.payment_status || "unknown"}
-                          </span>
-                        </td>
+                        {/* PAYMENT DROPDOWN */}
 
-                        {/* ORDER STATUS DROPDOWN */}
 
                         <td className="px-6 py-5">
                           <div className="flex flex-col gap-2">
+
+
+                            <select
+                              value={order.payment_status || "pending"}
+                              onChange={(e) =>
+                                updatePaymentStatus(
+                                  order.id,
+                                  e.target.value
+                                )
+                              }
+                              disabled={
+                                updatingPaymentOrderId === order.id
+                              }
+                              className={`rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold capitalize outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60 ${getPaymentStatusClass(
+                                order.payment_status
+                              )}`}
+                            >
+                              {PAYMENT_STATUSES.map((paymentStatus) => (
+                                <option
+                                  key={paymentStatus}
+                                  value={paymentStatus}
+                                >
+                                  {paymentStatus}
+                                </option>
+                              ))}
+                            </select>
+
+
+                            {updatingPaymentOrderId === order.id && (
+                              <p className="text-xs font-medium text-blue-600">
+                                Saving...
+                              </p>
+                            )}
+
+
+                          </div>
+                        </td>
+
+
+                        {/* ORDER STATUS */}
+
+
+                        <td className="px-6 py-5">
+                          <div className="flex flex-col gap-2">
+
 
                             <select
                               value={order.status || "pending"}
@@ -393,16 +585,20 @@ export default function AdminOrdersPage() {
                               ))}
                             </select>
 
+
                             {updatingOrderId === order.id && (
                               <p className="text-xs font-medium text-blue-600">
                                 Saving...
                               </p>
                             )}
 
+
                           </div>
                         </td>
 
+
                         {/* DATE */}
+
 
                         <td className="px-6 py-5">
                           <p className="whitespace-nowrap text-sm text-gray-600">
@@ -410,65 +606,118 @@ export default function AdminOrdersPage() {
                           </p>
                         </td>
 
+
                       </tr>
                     ))}
+
+
                   </tbody>
                 </table>
               </div>
 
+
               {/* MOBILE CARDS */}
 
+
               <div className="space-y-4 p-4 md:hidden">
+
+
                 {orders.map((order) => (
                   <div
                     key={order.id}
                     className="rounded-xl border border-gray-200 p-4"
                   >
 
+
                     {/* ORDER HEADER */}
+
 
                     <div className="flex items-start justify-between gap-3">
                       <div>
+
+
                         <p className="text-xs text-gray-500">
                           Order ID
                         </p>
 
+
                         <p className="mt-1 break-all text-sm font-bold text-gray-900">
                           #{order.id}
                         </p>
+
+
                       </div>
+
 
                       <p className="text-lg font-bold text-blue-600">
                         {formatCurrency(order.total_amount)}
                       </p>
                     </div>
 
+
                     {/* PAYMENT + STATUS */}
+
 
                     <div className="mt-4 grid grid-cols-2 gap-4">
 
+
                       {/* PAYMENT */}
 
+
                       <div>
+
+
                         <p className="text-xs text-gray-500">
                           Payment
                         </p>
 
-                        <span
-                          className={`mt-1 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${getPaymentStatusClass(
+
+                        <select
+                          value={order.payment_status || "pending"}
+                          onChange={(e) =>
+                            updatePaymentStatus(
+                              order.id,
+                              e.target.value
+                            )
+                          }
+                          disabled={
+                            updatingPaymentOrderId === order.id
+                          }
+                          className={`mt-1 w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-semibold capitalize outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60 ${getPaymentStatusClass(
                             order.payment_status
                           )}`}
                         >
-                          {order.payment_status || "unknown"}
-                        </span>
+                          {PAYMENT_STATUSES.map((paymentStatus) => (
+                            <option
+                              key={paymentStatus}
+                              value={paymentStatus}
+                            >
+                              {paymentStatus}
+                            </option>
+                          ))}
+                        </select>
+
+
+                        {updatingPaymentOrderId === order.id && (
+                          <p className="mt-1 text-xs font-medium text-blue-600">
+                            Saving...
+                          </p>
+                        )}
+
+
                       </div>
 
-                      {/* STATUS */}
+
+                      {/* ORDER STATUS */}
+
 
                       <div>
+
+
                         <p className="text-xs text-gray-500">
                           Order Status
                         </p>
+
 
                         <select
                           value={order.status || "pending"}
@@ -495,54 +744,81 @@ export default function AdminOrdersPage() {
                           ))}
                         </select>
 
+
                         {updatingOrderId === order.id && (
                           <p className="mt-1 text-xs font-medium text-blue-600">
                             Saving...
                           </p>
                         )}
+
+
                       </div>
                     </div>
 
+
                     {/* CUSTOMER */}
 
+
                     <div className="mt-4 border-t border-gray-100 pt-4">
+
+
                       <p className="text-xs text-gray-500">
                         Customer
                       </p>
 
+
                       <p className="mt-1 break-all text-sm text-gray-700">
                         {order.user_id || "Guest"}
                       </p>
+
+
                     </div>
+
 
                     {/* DELIVERY ADDRESS */}
 
+
                     {order.delivery_address && (
                       <div className="mt-3">
+
+
                         <p className="text-xs text-gray-500">
                           Delivery Address
                         </p>
 
+
                         <p className="mt-1 text-sm text-gray-700">
                           {order.delivery_address}
                         </p>
+
+
                       </div>
                     )}
 
+
                     {/* DATE */}
 
+
                     <div className="mt-3">
+
+
                       <p className="text-xs text-gray-500">
                         Date
                       </p>
 
+
                       <p className="mt-1 text-sm text-gray-700">
                         {formatDate(order.created_at)}
                       </p>
+
+
                     </div>
+
 
                   </div>
                 ))}
+
+
               </div>
             </>
           )}
@@ -551,4 +827,3 @@ export default function AdminOrdersPage() {
     </main>
   );
 }
-
