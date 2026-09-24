@@ -46,19 +46,23 @@ export default function AppliancesPage() {
     setLoading(false);
   };
 
-  const handleAddToCart = (product: Product) => {
-    addToCart({
-      name: product.name,
-      price: Number(product.price),
-      image: product.image || undefined,
-    });
+ const handleAddToCart = (product: Product) => {
+  addToCart({
+    id: product.id,
+    name: product.name,
+    price: Number(product.price),
+    image: product.image || undefined,
+  });
 
-    setMessage(`${product.name} added to cart!`);
 
-    setTimeout(() => {
-      setMessage("");
-    }, 2000);
-  };
+  setMessage(`${product.name} added to cart!`);
+
+
+  setTimeout(() => {
+    setMessage("");
+  }, 2000);
+};
+
 
   const formatAmount = (amount: number) => {
     return `₦${Number(amount).toLocaleString("en-NG")}`;

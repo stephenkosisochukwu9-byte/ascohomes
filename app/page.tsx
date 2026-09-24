@@ -1,11 +1,14 @@
 "use client";
 
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { User, Session } from "@supabase/supabase-js";
 
+
 import { useCart } from "@/components/store/CartContext";
 import { supabase } from "@/lib/supabase";
+
 
 type Product = {
   id: string;
@@ -19,18 +22,22 @@ type Product = {
   created_at: string;
 };
 
+
 export default function Home() {
   const { addToCart } = useCart();
+
 
   // =========================
   // USER
   // =========================
   const [user, setUser] = useState<User | null>(null);
 
+
   // =========================
   // CART NOTIFICATION
   // =========================
   const [addedProduct, setAddedProduct] = useState<string | null>(null);
+
 
   // =========================
   // PRODUCTS
@@ -39,25 +46,29 @@ export default function Home() {
   const [bestSellers, setBestSellers] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
 
+
   // =========================================================
   // CHECK AUTHENTICATED USER
   // =========================================================
   useEffect(() => {
     let mounted = true;
 
+
     const loadUser = async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
+
 
       if (mounted) {
         setUser(user);
       }
     };
 
+
     loadUser();
 
-    // Listen for login/logout/auth changes
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
@@ -68,11 +79,13 @@ export default function Home() {
       }
     );
 
+
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
   }, []);
+
 
   // =========================================================
   // LOAD HOMEPAGE PRODUCTS
@@ -81,8 +94,10 @@ export default function Home() {
     loadHomepageProducts();
   }, []);
 
+
   const loadHomepageProducts = async () => {
     setProductsLoading(true);
+
 
     const { data, error } = await supabase
       .from("products")
@@ -92,40 +107,65 @@ export default function Home() {
       .order("created_at", { ascending: false })
       .limit(8);
 
+
     if (error) {
       console.error("Could not load homepage products:", error);
       setProductsLoading(false);
       return;
     }
 
+
     const allProducts = data || [];
+
 
     setPopularProducts(allProducts.slice(0, 4));
     setBestSellers(allProducts.slice(4, 8));
 
+
     setProductsLoading(false);
   };
+
 
   // =========================================================
   // ADD PRODUCT TO CART
   // =========================================================
   const handleAddToCart = (product: Product) => {
-    if (product.stock <= 0) {
+    console.log("ADDING PRODUCT TO CART:", product);
+
+
+    // Prevent adding products without an ID
+    if (!product.id) {
+      console.error("Cannot add product: product ID is missing.");
       return;
     }
 
+
+    // Prevent adding products that are out of stock
+    if (product.stock <= 0) {
+      console.warn("Cannot add product: product is out of stock.");
+      return;
+    }
+
+
+    // Add product
     addToCart({
+      id: product.id,
       name: product.name,
       price: Number(product.price),
       image: product.image || undefined,
     });
 
+
+    // Show success notification
     setAddedProduct(product.name);
 
+
+    // Remove notification after 2 seconds
     setTimeout(() => {
       setAddedProduct(null);
     }, 2000);
   };
+
 
   // =========================================================
   // FORMAT PRICE
@@ -133,6 +173,7 @@ export default function Home() {
   const formatAmount = (amount: number) => {
     return `₦${Number(amount).toLocaleString("en-NG")}`;
   };
+
 
   // =========================================================
   // PRODUCT CARD
@@ -155,11 +196,13 @@ export default function Home() {
           )}
         </div>
 
+
         {/* Product Information */}
         <div className="p-2 sm:p-4">
           <h3 className="line-clamp-2 text-xs font-semibold text-gray-900 sm:text-base">
             {product.name}
           </h3>
+
 
           {/* Price */}
           <div className="mt-1">
@@ -167,12 +210,14 @@ export default function Home() {
               {formatAmount(product.price)}
             </p>
 
+
             {product.old_price !== null && (
               <p className="text-[10px] text-gray-500 line-through sm:text-sm">
                 {formatAmount(product.old_price)}
               </p>
             )}
           </div>
+
 
           {/* Stock */}
           {product.stock <= 0 ? (
@@ -185,6 +230,7 @@ export default function Home() {
             </p>
           )}
 
+
           {/* Add To Cart Button */}
           <button
             type="button"
@@ -192,12 +238,13 @@ export default function Home() {
             disabled={product.stock <= 0}
             className="mt-2 w-full rounded-lg bg-blue-700 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-800 active:scale-95 disabled:cursor-not-allowed disabled:bg-gray-400 sm:py-2 sm:text-sm"
           >
-            {product.stock <= 0 ? "Out of Stock" : "Add"}
+            {product.stock <= 0 ? "Out of Stock" : "Add to Cart"}
           </button>
         </div>
       </div>
     );
   };
+
 
   // =========================================================
   // PAGE
@@ -213,6 +260,7 @@ export default function Home() {
         </div>
       )}
 
+
       {/* =====================================================
           HEADER
       ====================================================== */}
@@ -226,6 +274,7 @@ export default function Home() {
             <span className="text-blue-700">ASCO</span>
             <span className="text-orange-500">HOMES</span>
           </Link>
+
 
           {/* Header Actions */}
           <div className="flex items-center gap-3 sm:gap-5">
@@ -249,6 +298,7 @@ export default function Home() {
                   d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5v-9Z"
                 />
 
+
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -256,10 +306,12 @@ export default function Home() {
                 />
               </svg>
 
+
               <span className="text-xs font-semibold text-gray-800 sm:text-sm">
                 My Orders
               </span>
             </Link>
+
 
             {/* Cart */}
             <Link
@@ -282,6 +334,7 @@ export default function Home() {
                 />
               </svg>
             </Link>
+
 
             {/* Account */}
             <Link
@@ -308,16 +361,21 @@ export default function Home() {
         </div>
       </header>
 
+
       {/* =====================================================
           SEARCH
       ====================================================== */}
       <section className="mx-auto max-w-7xl px-4 pt-5 sm:px-6 lg:px-8">
         <div className="relative">
           <input
+            id="product-search"
+            name="product-search"
             type="search"
             placeholder="Search for products..."
+            autoComplete="off"
             className="w-full rounded-xl border border-gray-300 bg-gray-50 py-3 pl-11 pr-4 text-gray-900 outline-none placeholder:text-gray-500 focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100"
           />
+
 
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -336,6 +394,7 @@ export default function Home() {
         </div>
       </section>
 
+
       {/* =====================================================
           SHOP BY CATEGORY
       ====================================================== */}
@@ -344,12 +403,13 @@ export default function Home() {
           Shop by Category
         </h2>
 
+
         <p className="mt-2 text-gray-600">
           Find everything you need for your home.
         </p>
 
+
         <div className="mt-6 grid grid-cols-2 gap-4">
-          {/* Cleaning */}
           <Link
             href="/categories/cleaning"
             className="rounded-2xl border border-gray-200 bg-gray-50 p-5 text-left transition hover:border-blue-600 hover:bg-blue-50"
@@ -358,16 +418,18 @@ export default function Home() {
               🧹
             </div>
 
+
             <h3 className="mt-4 text-base font-semibold text-gray-900">
               Cleaning Supplies
             </h3>
+
 
             <p className="mt-1 text-sm text-gray-600">
               Keep your home clean
             </p>
           </Link>
 
-          {/* Bathroom */}
+
           <Link
             href="/categories/bathroom"
             className="rounded-2xl border border-gray-200 bg-gray-50 p-5 text-left transition hover:border-blue-600 hover:bg-blue-50"
@@ -376,16 +438,18 @@ export default function Home() {
               🚿
             </div>
 
+
             <h3 className="mt-4 text-base font-semibold text-gray-900">
               Bathroom
             </h3>
+
 
             <p className="mt-1 text-sm text-gray-600">
               Bathroom essentials
             </p>
           </Link>
 
-          {/* Kitchen */}
+
           <Link
             href="/categories/kitchen"
             className="rounded-2xl border border-gray-200 bg-gray-50 p-5 text-left transition hover:border-blue-600 hover:bg-blue-50"
@@ -394,16 +458,18 @@ export default function Home() {
               🍳
             </div>
 
+
             <h3 className="mt-4 text-base font-semibold text-gray-900">
               Kitchen
             </h3>
+
 
             <p className="mt-1 text-sm text-gray-600">
               Kitchen essentials
             </p>
           </Link>
 
-          {/* Appliances */}
+
           <Link
             href="/categories/appliances"
             className="rounded-2xl border border-gray-200 bg-gray-50 p-5 text-left transition hover:border-blue-600 hover:bg-blue-50"
@@ -412,16 +478,18 @@ export default function Home() {
               ⚡
             </div>
 
+
             <h3 className="mt-4 text-base font-semibold text-gray-900">
               Appliances
             </h3>
+
 
             <p className="mt-1 text-sm text-gray-600">
               Useful home appliances
             </p>
           </Link>
 
-          {/* Home & Storage */}
+
           <Link
             href="/categories/home-storage"
             className="rounded-2xl border border-gray-200 bg-gray-50 p-5 text-left transition hover:border-blue-600 hover:bg-blue-50"
@@ -430,9 +498,11 @@ export default function Home() {
               📦
             </div>
 
+
             <h3 className="mt-4 text-base font-semibold text-gray-900">
               Home & Storage
             </h3>
+
 
             <p className="mt-1 text-sm text-gray-600">
               Organize and improve your home
@@ -440,6 +510,7 @@ export default function Home() {
           </Link>
         </div>
       </section>
+
 
       {/* =====================================================
           POPULAR PRODUCTS
@@ -450,6 +521,7 @@ export default function Home() {
             Popular Products
           </h2>
 
+
           <Link
             href="/categories"
             className="text-sm font-semibold text-blue-700 transition hover:text-blue-800"
@@ -458,9 +530,11 @@ export default function Home() {
           </Link>
         </div>
 
+
         <p className="mt-2 text-gray-600">
           Shop products our customers love.
         </p>
+
 
         {productsLoading ? (
           <div className="mt-6 rounded-xl bg-gray-50 p-8 text-center">
@@ -477,14 +551,12 @@ export default function Home() {
         ) : (
           <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
             {popularProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-              />
+              <ProductCard key={product.id} product={product} />
             ))}
           </div>
         )}
       </section>
+
 
       {/* =====================================================
           BEST SELLERS
@@ -495,6 +567,7 @@ export default function Home() {
             Best Sellers
           </h2>
 
+
           <Link
             href="/categories"
             className="text-sm font-semibold text-blue-700 transition hover:text-blue-800"
@@ -503,9 +576,11 @@ export default function Home() {
           </Link>
         </div>
 
+
         <p className="mt-2 text-gray-600">
           Our most popular products right now.
         </p>
+
 
         {productsLoading ? (
           <div className="mt-6 rounded-xl bg-gray-50 p-8 text-center">
@@ -522,14 +597,12 @@ export default function Home() {
         ) : (
           <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
             {bestSellers.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-              />
+              <ProductCard key={product.id} product={product} />
             ))}
           </div>
         )}
       </section>
+
 
       {/* =====================================================
           WHY ASCOHOMES
@@ -541,66 +614,75 @@ export default function Home() {
               Why ASCOHOMES?
             </h2>
 
+
             <p className="mx-auto mt-2 max-w-xl text-gray-600">
               Everything you need for your home, conveniently in one place.
             </p>
           </div>
 
+
           <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-4">
-            {/* Quality */}
             <div className="rounded-2xl bg-white p-5 text-center shadow-sm">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-2xl">
                 ✓
               </div>
 
+
               <h3 className="mt-4 font-semibold text-gray-900">
                 Quality Products
               </h3>
+
 
               <p className="mt-2 text-sm text-gray-600">
                 Carefully selected products for your home.
               </p>
             </div>
 
-            {/* Affordable */}
+
             <div className="rounded-2xl bg-white p-5 text-center shadow-sm">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 text-2xl">
                 ₦
               </div>
 
+
               <h3 className="mt-4 font-semibold text-gray-900">
                 Affordable Prices
               </h3>
+
 
               <p className="mt-2 text-sm text-gray-600">
                 Great products at prices you can afford.
               </p>
             </div>
 
-            {/* Delivery */}
+
             <div className="rounded-2xl bg-white p-5 text-center shadow-sm">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-2xl">
                 🚚
               </div>
 
+
               <h3 className="mt-4 font-semibold text-gray-900">
                 Reliable Delivery
               </h3>
+
 
               <p className="mt-2 text-sm text-gray-600">
                 Get your household essentials delivered to you.
               </p>
             </div>
 
-            {/* Convenience */}
+
             <div className="rounded-2xl bg-white p-5 text-center shadow-sm">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 text-2xl">
                 🛍️
               </div>
 
+
               <h3 className="mt-4 font-semibold text-gray-900">
                 Easy Shopping
               </h3>
+
 
               <p className="mt-2 text-sm text-gray-600">
                 Find and order what you need with ease.
@@ -609,6 +691,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+
 
       {/* =====================================================
           FOOTER
@@ -623,16 +706,17 @@ export default function Home() {
                 <span className="text-orange-400">HOMES</span>
               </div>
 
+
               <p className="mt-3 max-w-xs text-sm leading-6 text-gray-300">
                 Everything your home needs, all in one place.
               </p>
             </div>
 
+
             {/* Shop */}
             <div>
-              <h3 className="font-semibold text-white">
-                Shop
-              </h3>
+              <h3 className="font-semibold text-white">Shop</h3>
+
 
               <ul className="mt-4 space-y-3 text-sm text-gray-300">
                 <li>
@@ -644,6 +728,7 @@ export default function Home() {
                   </Link>
                 </li>
 
+
                 <li>
                   <Link
                     href="/categories"
@@ -653,6 +738,7 @@ export default function Home() {
                   </Link>
                 </li>
 
+
                 <li>
                   <Link
                     href="/categories"
@@ -661,6 +747,7 @@ export default function Home() {
                     Popular Products
                   </Link>
                 </li>
+
 
                 <li>
                   <Link
@@ -673,11 +760,11 @@ export default function Home() {
               </ul>
             </div>
 
+
             {/* Help */}
             <div>
-              <h3 className="font-semibold text-white">
-                Help
-              </h3>
+              <h3 className="font-semibold text-white">Help</h3>
+
 
               <ul className="mt-4 space-y-3 text-sm text-gray-300">
                 <li>
@@ -689,6 +776,7 @@ export default function Home() {
                   </button>
                 </li>
 
+
                 <li>
                   <button
                     type="button"
@@ -698,6 +786,7 @@ export default function Home() {
                   </button>
                 </li>
 
+
                 <li>
                   <button
                     type="button"
@@ -706,6 +795,7 @@ export default function Home() {
                     Returns
                   </button>
                 </li>
+
 
                 <li>
                   <button
@@ -718,11 +808,11 @@ export default function Home() {
               </ul>
             </div>
 
+
             {/* Account */}
             <div>
-              <h3 className="font-semibold text-white">
-                Account
-              </h3>
+              <h3 className="font-semibold text-white">Account</h3>
+
 
               <ul className="mt-4 space-y-3 text-sm text-gray-300">
                 <li>
@@ -734,6 +824,7 @@ export default function Home() {
                   </Link>
                 </li>
 
+
                 <li>
                   <Link
                     href="/orders"
@@ -742,6 +833,7 @@ export default function Home() {
                     My Orders
                   </Link>
                 </li>
+
 
                 <li>
                   <Link
@@ -754,6 +846,7 @@ export default function Home() {
               </ul>
             </div>
           </div>
+
 
           {/* Bottom Footer */}
           <div className="mt-10 border-t border-gray-700 pt-6 text-center">
